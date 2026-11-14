@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Radar — pre-token protocols ranked by implied launch value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main id="app" aria-busy="true">
+  <header class="mast">
+    <div class="mast-left">
+      <div class="logo">TOKEN<span>RADAR</span></div>
+      <div class="tagline">Every protocol that records no token — ranked by what its launch would be worth.</div>
+    </div>
+    <div class="mast-right">
+      <div class="meta" id="meta">Loading snapshot…</div>
+      <div class="model-badge" id="modelBadge"></div>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="panel" id="howto">
+    <h2>How to read this board</h2>
+    <p><strong>Implied value</strong> is the model's claim for what a protocol's token would be worth if its
+    record stayed as it is — TVL × 0.30, adjusted for 7-day growth, age and chain reach. It is <em>not</em> a prediction that a token will launch, or when.
+    <strong>“Records no token”</strong> means DefiLlama's record carries no market cap, CoinGecko id or symbol —
+    never that the protocol has none. Wrapped, staked and bridged products are <strong>not ranked</strong> at all:
+    their token already trades in another form, so they sit in the “Not ranked” list below instead of at the top of the board.
+    Click any row for its detail view and farm plan.</p>
+  </section>
+
+  <section class="panel controls" id="controls">
+    <div class="ctl">
+      <label for="q">Search</label>
+      <input id="q" type="search" placeholder="name or slug…" autocomplete="off">
+    </div>
+    <div class="ctl">
+      <label for="cat">Category</label>
+      <select id="cat"></select>
+    </div>
+    <div class="ctl">
+      <label for="chain">Chain</label>
+      <select id="chain"></select>
+    </div>
+    <div class="ctl">
+      <label for="minTvl">Min TVL</label>
+      <select id="minTvl">
+        <option value="0">Any</option>
+        <option value="5000000">$5M+</option>
+        <option value="50000000" selected>$50M+ (watchlist floor)</option>
+        <option value="500000000">$500M+</option>
+        <option value="1000000000">$1B+</option>
+      </select>
+    </div>
+    <div class="ctl check">
+      <label><input id="watchOnly" type="checkbox"> Watchlist only</label>
+    </div>
+    <div class="ctl">
+      <label for="sort">Sort by</label>
+      <select id="sort">
+        <option value="rank">Rank (implied value)</option>
+        <option value="tvl">TVL</option>
+        <option value="growth">7-day growth</option>
+        <option value="age">Age</option>
+        <option value="name">Name A–Z</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="board-head">
+      <h2 id="boardTitle">The board</h2>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="table-wrap">
+      <table id="board">
+        <thead>
+          <tr>
+            <th data-sort="rank">#</th>
+            <th data-sort="name">Protocol</th>
+            <th data-sort="category">Category</th>
+            <th data-sort="chains">Chains</th>
+            <th data-sort="tvl" class="num">TVL</th>
+            <th data-sort="growth" class="num">7d</th>
+            <th data-sort="age" class="num">Age</th>
+            <th data-sort="implied" class="num">Implied value</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="hint">Click a row to open its detail view. <span id="shownNote"></span></p>
+  </section>
+
+  <section class="panel detail" id="detail" hidden>
+    <div class="detail-head">
+      <h2 id="detailTitle">Protocol detail</h2>
+      <button id="detailClose" type="button">Close ✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Already trading — the live set</h2>
+    <p class="sec-note">These protocols already have a token that trades, so the board shows the market's own
+    value for them instead of a model's. They are the comparison set: a pre-token protocol's implied
+    value is only interesting next to what live tokens actually fetch.</p>
+    <div class="table-wrap">
+      <table id="live">
+        <thead>
+          <tr><th>Protocol</th><th>Category</th><th class="num">TVL</th><th class="num">Market cap</th><th class="num">MCAP / TVL</th><th class="num">7d</th></tr>
+        </thead>
+        <tbody id="liveRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Not ranked — wrapped, staked and bridged products</h2>
+    <p class="sec-note">These protocols record no token of their own, but each is a wrapped, staked or bridged
+    form of a token that already trades — WBTC is wrapped BTC, Binance staked ETH is staked ETH. A launch
+    of their own would not be a new token, so the board does not rank them. They are listed here, by TVL,
+    so nothing is hidden.</p>
+    <div class="table-wrap">
+      <table id="excluded">
+        <thead>
+          <tr><th>Protocol</th><th>Category</th><th class="num">TVL</th><th>Why not ranked</th></tr>
+        </thead>
+        <tbody id="excludedRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Model sandbox — change the model, watch the top 10 move</h2>
+    <p class="sec-note">The same arithmetic as the board, recomputed in your browser from the snapshot figures.
+    Nothing here is a separate model: move a slider and the top 10 re-ranks by the new constants.</p>
+    <div class="sandbox" id="sandbox">
+      <div class="sliders">
+        <label>Base multiple <span id="vBase">0.30</span><input id="sBase" type="range" min="0.05" max="1" step="0.05" value="0.3"></label>
+        <label>Growth weight <span id="vGrowth">0.70</span><input id="sGrowth" type="range" min="0" max="1.5" step="0.1" value="0.7"></label>
+        <label>Maturity years <span id="vMat">2.0</span><input id="sMat" type="range" min="0.5" max="5" step="0.5" value="2"></label>
+        <label>Chain step <span id="vChain">0.03</span><input id="sChain" type="range" min="0" max="0.1" step="0.01" value="0.03"></label>
+      </div>
+      <ol class="sandbox-top" id="sandboxTop"></ol>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Method &amp; limits</h2>
+    <div class="method" id="method"></div>
+  </section>
+
+  <footer>
+    <span id="foot"></span>
+  </footer>
+</main>
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
